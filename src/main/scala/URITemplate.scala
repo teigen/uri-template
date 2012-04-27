@@ -101,6 +101,7 @@ object Expression {
         case AssociativeVar(variable) => Some(modifier match {
           case None => name(variable.flatMap{ case (k,v) => Seq(allow(k), allow(v)) }.mkString(","))
           case Some(Explode) => variable.map{ case (k, v) => allow(k)+"="+allow(v)}.mkString(sep)
+          case Some(Prefix(_)) => throw new IllegalArgumentException("Not allowed by RFC-6570")
         })
       }
     }
