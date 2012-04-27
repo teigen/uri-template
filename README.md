@@ -1,6 +1,6 @@
 URI Template
 =============
-Complete implementation of draft-8 of [uri-templates](https://datatracker.ietf.org/doc/draft-gregorio-uritemplate/) in Scala
+Complete implementation of draft-8 of [uri-templates](http://tools.ietf.org/html/rfc6570) in Scala
 
 [Apache 2 Licenced](http://www.apache.org/licenses/LICENSE-2.0)
 
