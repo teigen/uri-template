@@ -1,24 +1,23 @@
 import aether._
-import AetherKeys._
 import sbt._
 import sbt.Keys._
 import xml.Group
 
 object Build extends sbt.Build {
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Aether.aetherSettings ++ Seq(
+  lazy val buildSettings = Defaults.defaultSettings ++ Aether.aetherPublishSettings ++ Seq(
     organization := "no.arktekk",
-    scalaVersion := "2.9.1",
-    crossScalaVersions := Seq("2.9.1"),
-    scalacOptions := Seq("-deprecation"),
-    deployRepository <<= (version) apply {
-      (v: String) => if (v.trim().endsWith("SNAPSHOT")) Resolvers.sonatypeNexusSnapshots else Resolvers.sonatypeNexusStaging
+    scalaVersion := "2.10.1",
+    crossScalaVersions := Seq("2.10.1", "2.9.3", "2.9.2", "2.9.1"),
+    scalacOptions <<= (scalaVersion) map {(sv: String) => 
+      val twoTen = if (sv.startsWith("2.10")) List("-language:implicitConversions") else Nil 
+      "-deprecation" :: twoTen      
+    },
+    publishTo <<= (version) apply {
+      (v: String) => if (v.trim().endsWith("SNAPSHOT")) Some(Resolvers.sonatypeNexusSnapshots) else Some(Resolvers.sonatypeNexusStaging)
     },
     pomIncludeRepository := { x => false },
-    aetherCredentials := {
-      val cred = Path.userHome / ".sbt" / "arktekk-credentials"
-      if (cred.exists()) Some(Credentials(cred)) else None
-    }
+    credentials += Credentials(Path.userHome / ".sbt" / "arktekk-credentials")      
   )
 
   lazy val root = Project(
@@ -27,10 +26,9 @@ object Build extends sbt.Build {
     settings = buildSettings ++ Seq(
       description := "URI Template",
       name := "uri-template", 
-      libraryDependencies := Seq(
-        "org.scalatest" %% "scalatest" % "1.7.1" % "test"
-      ),
-    publish <<= Aether.deployTask.init,
+      libraryDependencies ++= Seq(
+        "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+      ),    
     manifestSetting
     ) ++ mavenCentralFrouFrou
   )

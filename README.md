@@ -14,3 +14,18 @@ Example of usage (see the tests for more)
 	val expanded = template expand ("variable" := "world")
 	
 	expanded == "http://example.com/hello/world"
+
+Dependencies
+------------
+
+SBT:
+	
+	libraryDependencies += "no.arktekk" %% "uri-template" % "1.1"
+
+Maven:
+
+	<dependency>
+	  <groupId>no.arktekk</groupId>
+	  <artifactId>uri-template_${scalaVersion}</artifactId>
+	  <version>1.1</version>
+	</dependency>
