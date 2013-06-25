@@ -10,7 +10,7 @@ import java.io.{InputStreamReader, FileInputStream}
 abstract class JsonSpec(file:String) extends FunSpec {
   override def suiteName = file
 
-  val JObject(examples) = parseJson(new InputStreamReader(new FileInputStream("uritemplate-test/"+file)))
+  val JObject(examples) = parseJson(new InputStreamReader(new FileInputStream("uritemplate-test/"+file), "UTF-8"))
   for((name, example) <- examples){
     describe(name){
       val JObject(variables) = example \ "variables"

@@ -29,21 +29,7 @@ sealed trait Lit extends Expansion {
 }
 case class Encoded(expanded:String) extends Lit
 case class Unencoded(char:Char) extends Lit {
-  def expanded = //"%"+char.toInt.toHexString.toUpperCase
-  {
-    def hex(x:Int) = "%"+x.toHexString.toUpperCase
-    val c = char.toInt
-    if(c < 128)
-      hex(c)
-    else if(128 <= c && c < 2048){
-      hex((c >> 6) | 192) +
-      hex((c & 63) | 128)
-    } else {
-      hex((c >> 12)       | 224) +
-      hex(((c >> 6) & 63) | 128) +
-      hex((c & 63)        | 128)
-    }
-  }
+  def expanded = char.toString.getBytes("UTF-8").map(b => "%02X".format(b)).mkString("%", "%", "")
 }
 
 case class VarSpec(name: String, modifier: Option[Modifier])
@@ -56,9 +42,11 @@ object Expression {
       def name(s:String) = if(named) n+"="+s else s
       
       variables.getOrElse(n, None).flatMap{          
-        case SequentialVar(Seq()) | AssociativeVar(Seq()) => None
+        case SequentialVar(Seq()) | AssociativeVar(Seq()) =>
+          if(named && modifier == None) Some(n+ifemp) else None
 
-        case SequentialVar(Seq("")) => Some(if(named)n+ifemp else ifemp)
+        case SequentialVar(Seq("")) =>
+          Some(if(named)n+ifemp else ifemp)
 
         case SequentialVar(variable) => Some(modifier match {
           case None => name(variable.map(allow).mkString(","))              
