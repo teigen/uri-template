@@ -1,51 +1,5 @@
 package uritemplate
 
-object Syntax extends Syntax
-
-trait Syntax {
-  implicit def varString(s:String) = Var(s)
-}
-
-case class Var(s:String){
-  def :=[V : CanBeVar](v:V):(String, Option[Variable]) = (s, CanBeVar[V].canBe(v))
-}
-
-object CanBeVar extends CanBeVars {
-  def apply[V](implicit canBe:CanBeVar[V]) = canBe
-}
-
-trait CanBeVar[-V] {
-  def canBe(v:V):Option[Variable]
-}
-
-trait CanBeVars extends LowerPriorityCanBeVars {
-  implicit val stringCanBe = new CanBeVar[String]{
-    def canBe(v: String) = Option(v).map(vv => SequentialVar(Seq(vv)))
-  }
-
-  implicit val tuple2CanBe = new CanBeVar[(String, String)]{
-    def canBe(v: (String, String)) = Option(v).map(vv => AssociativeVar(Seq(vv)))
-  }
-
-  implicit val seqStringCanBe = new CanBeVar[Seq[String]]{
-    def canBe(v: Seq[String]) = Option(v).map(SequentialVar)
-  }
-
-  implicit def optionCanBe[C : CanBeVar] = new CanBeVar[Option[C]]{
-    def canBe(v: Option[C]) = v.flatMap(CanBeVar[C].canBe)
-  }
-
-  implicit val optionNothingCanBe = new CanBeVar[Option[Nothing]]{
-    def canBe(v: Option[Nothing]) = v
-  }
-}
-
-trait LowerPriorityCanBeVars {
-  implicit val seqTupleCanBe = new CanBeVar[Seq[(String, String)]]{
-    def canBe(v: Seq[(String, String)]) = Option(v).map(AssociativeVar)
-  }
-}
-
 sealed trait Variable
 case class SequentialVar(variable:Seq[String]) extends Variable
 case class AssociativeVar(variable:Seq[(String, String)]) extends Variable
@@ -75,7 +29,21 @@ sealed trait Lit extends Expansion {
 }
 case class Encoded(expanded:String) extends Lit
 case class Unencoded(char:Char) extends Lit {
-  def expanded = "%" + char.intValue().toHexString.toUpperCase
+  def expanded = //"%"+char.toInt.toHexString.toUpperCase
+  {
+    def hex(x:Int) = "%"+x.toHexString.toUpperCase
+    val c = char.toInt
+    if(c < 128)
+      hex(c)
+    else if(128 <= c && c < 2048){
+      hex((c >> 6) | 192) +
+      hex((c & 63) | 128)
+    } else {
+      hex((c >> 12)       | 224) +
+      hex(((c >> 6) & 63) | 128) +
+      hex((c & 63)        | 128)
+    }
+  }
 }
 
 case class VarSpec(name: String, modifier: Option[Modifier])
@@ -128,7 +96,7 @@ case object Explode extends Modifier
 
 object URITemplateParser {
   import util.parsing.combinator.RegexParsers
-  import util.parsing.input.{CharSequenceReader}  
+  import util.parsing.input.CharSequenceReader
   
   def parse(s:String):Either[String, URITemplate] = {
     val syntax = new URITemplateParsers

@@ -6,8 +6,8 @@ object Build extends sbt.Build {
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "no.arktekk",
-    scalaVersion := "2.10.1",
-    crossScalaVersions := Seq("2.10.1", "2.9.3", "2.9.2", "2.9.1"),
+    scalaVersion := "2.10.2",
+    crossScalaVersions := Seq("2.10.2", "2.9.3", "2.9.2", "2.9.1"),
     scalacOptions <<= (scalaVersion) map {(sv: String) => 
       val twoTen = if (sv.startsWith("2.10")) List("-language:implicitConversions") else Nil 
       "-deprecation" :: twoTen      
@@ -26,7 +26,8 @@ object Build extends sbt.Build {
       description := "URI Template",
       name := "uri-template", 
       libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+        "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+        "org.json4s" %% "json4s-native" % "3.2.4" % "test"
       ),    
     manifestSetting
     ) ++ mavenCentralFrouFrou
