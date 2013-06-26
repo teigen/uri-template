@@ -17,6 +17,11 @@ object Allow {
 case class URITemplate(expansions: List[Expansion]){
   def expand(variables:Map[String, Option[Variable]]) = expansions.map(_.expand(variables)).mkString  
   def expand(variables:(String, Option[Variable])*):String = expand(Map(variables:_*))
+
+  def variables = expansions.flatMap{
+    case e:Expression => e.variableList.map(_.name)
+    case _ => Nil
+  }.toSet
 }
 
 sealed trait Expansion {
