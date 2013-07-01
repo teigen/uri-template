@@ -13,7 +13,7 @@ object Magic {
     def generate(template:URITemplate) = {
       val vars = template.variables.map{ name =>
         val ref      = c.typeCheck(Ident(newTermName(name)))
-        val tpe      = appliedType(typeOf[CanBeVar[_]], List(ref.tpe))
+        val tpe      = appliedType(typeOf[Syntax.CanBeVar[_]], List(ref.tpe))
         val instance = c.inferImplicitValue(tpe)
 
         val nme      = c.Expr[String](Literal(Constant(name)))
@@ -29,7 +29,7 @@ object Magic {
 
     s.tree match {
       case Literal(Constant(string:String)) =>
-        URITemplateParser.parse(string).fold(x => c.abort(c.enclosingPosition, x), x => generate(x))
+        URITemplate.parse(string).fold(x => c.abort(c.enclosingPosition, x), x => generate(x))
       case _ =>
         c.abort(c.enclosingPosition, "unknown tree " + show(s))
     }
