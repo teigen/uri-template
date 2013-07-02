@@ -3,6 +3,7 @@ package uritemplate
 import util.parsing.combinator.ImplicitConversions
 
 object Variable {
+  case class Single(variable:String) extends Variable
   case class Sequential(variable:Seq[String]) extends Variable
   case class Associative(variable:Seq[(String, String)]) extends Variable
 }
@@ -24,6 +25,7 @@ object URITemplate {
   }
 
   object Expression {
+    import Variable._
 
     def expand(variables:Map[String, Option[Variable]], variableList:List[VarSpec], first:String, sep:String, named:Boolean, ifemp:String, allow:String => String) = {
       val expanded = variableList.flatMap{ case VarSpec(n, modifier) =>
@@ -31,19 +33,25 @@ object URITemplate {
         def name(s:String) = if(named) n+"="+s else s
 
         variables.getOrElse(n, None).flatMap{
-          case Variable.Sequential(Seq()) | Variable.Associative(Seq()) =>
+          case Sequential(Seq()) | Associative(Seq()) =>
             if(named && modifier == None) Some(n+ifemp) else None
 
-          case Variable.Sequential(Seq("")) =>
+          case Single("") =>
             Some(if(named)n+ifemp else ifemp)
 
-          case Variable.Sequential(variable) => Some(modifier match {
+          case Single(variable) => Some(modifier match {
+            case None                 => name(allow(variable))
+            case Some(Prefix(length)) => name(allow(variable.take(length)))
+            case Some(Explode)        => name(allow(variable))
+          })
+
+          case Sequential(variable) => Some(modifier match {
             case None => name(variable.map(allow).mkString(","))
             case Some(Prefix(length)) => name(variable.map(v => allow(v.take(length))).mkString(","))
             case Some(Explode) => variable.map(n => name(allow(n))).mkString(sep)
           })
 
-          case Variable.Associative(variable) => Some(modifier match {
+          case Associative(variable) => Some(modifier match {
             case None => name(variable.flatMap{ case (k,v) => Seq(allow(k), allow(v)) }.mkString(","))
             case Some(Explode) => variable.map{ case (k, v) => allow(k)+"="+allow(v)}.mkString(sep)
             case Some(Prefix(_)) => throw new IllegalArgumentException("Not allowed by RFC-6570")
@@ -127,12 +135,12 @@ object URITemplate {
 
       lazy val operator =
         ( "+" ^^^ Reserved
-          | "#" ^^^ Fragment
-          | "." ^^^ Label
-          | "/" ^^^ PathSegment
-          | ";" ^^^ PathParameter
-          | "?" ^^^ Query
-          | "&" ^^^ QueryContinuation )
+        | "#" ^^^ Fragment
+        | "." ^^^ Label
+        | "/" ^^^ PathSegment
+        | ";" ^^^ PathParameter
+        | "?" ^^^ Query
+        | "&" ^^^ QueryContinuation )
 
       lazy val variableList = repsep(varspec, ",")
       lazy val varspec = varname ~ modifierLevel4.? ^^ VarSpec

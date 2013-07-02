@@ -18,9 +18,9 @@ object Syntax {
   trait CanBeVars extends LowerPriorityCanBeVars {
     import Variable._
 
-    implicit val string    = CanBeVar[String](s => Sequential(Seq(s)))
-    implicit val int       = CanBeVar[Int](s => Sequential(Seq(s.toString)))
-    implicit val double    = CanBeVar[Double](s => Sequential(Seq(s.toString)))
+    implicit val string    = CanBeVar[String](s => Single(s))
+    implicit val int       = CanBeVar[Int](s => Single(s.toString))
+    implicit val double    = CanBeVar[Double](s => Single(s.toString))
     implicit val tuple2    = CanBeVar[(String, String)](s => Associative(Seq(s)))
     implicit val seqString = CanBeVar[Seq[String]](Sequential)
     implicit def option[C : CanBeVar] = new CanBeVar[Option[C]]{
