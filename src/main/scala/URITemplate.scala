@@ -3,6 +3,7 @@ package uritemplate
 object Syntax extends Syntax
 
 trait Syntax {
+  import scala.language.implicitConversions
   implicit def varString(s:String) = Var(s)
 }
 
@@ -226,8 +227,8 @@ object URITemplateParser {
       ( %(0xE000,0xF8FF) | %(0xF0000,0xFFFFD) | %(0x100000,0x10FFFD) ) ^^ Unencoded
 
     lazy val anyChar = elem("anyChar", _ != 26.toChar)
-    def %(v:Int) = elem(v.toHexString.toUpperCase, _.intValue() == v)
-    def %(from:Int, to:Int) = elem(from.toHexString.toUpperCase+"-"+to.toHexString.toUpperCase, c => c.intValue() >= from && c.intValue() <= to)
+    def %(v:Int) = elem(v.toHexString.toUpperCase, _.toInt == v)
+    def %(from:Int, to:Int) = elem(from.toHexString.toUpperCase+"-"+to.toHexString.toUpperCase, c =>  c.toInt >= from && c.toInt <= to)
   }
 }
 

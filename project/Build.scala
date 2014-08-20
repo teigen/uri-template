@@ -6,12 +6,8 @@ object Build extends sbt.Build {
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "no.arktekk",
-    scalaVersion := "2.10.1",
-    crossScalaVersions := Seq("2.10.1", "2.9.3", "2.9.2", "2.9.1"),
-    scalacOptions <<= (scalaVersion) map {(sv: String) => 
-      val twoTen = if (sv.startsWith("2.10")) List("-language:implicitConversions") else Nil 
-      "-deprecation" :: twoTen      
-    },
+    scalaVersion := "2.11.2",
+    crossScalaVersions := Seq("2.11.2","2.10.1"),
     publishTo <<= (version) apply {
       (v: String) => if (v.trim().endsWith("SNAPSHOT")) Some(Resolvers.sonatypeNexusSnapshots) else Some(Resolvers.sonatypeNexusStaging)
     },
@@ -26,8 +22,11 @@ object Build extends sbt.Build {
       description := "URI Template",
       name := "uri-template", 
       libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "1.9.1" % "test"
-      ),    
+        "org.scalatest" %% "scalatest" % "2.2.2" % "test"
+      ),
+      libraryDependencies <++= (scalaBinaryVersion) apply {(sv: String) =>
+        if(sv == "2.11") Seq("org.scala-lang.modules" % "scala-parser-combinators_2.11" % "1.0.2") else Nil
+      },
     manifestSetting
     ) ++ mavenCentralFrouFrou
   )
