@@ -21,7 +21,7 @@ trait ExpansionSpec extends AnyPropSpec {
 
   def name: String
 
-  def example(name: String)(examples: (String, String)*) {
+  def example(name: String)(examples: (String, String)*): Unit = {
     property(name) {
       val table = Table(("Expression", "Expansion"), examples: _*)
       forAll(table) { (exp, ex) =>

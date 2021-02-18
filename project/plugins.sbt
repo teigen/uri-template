@@ -1,10 +1,4 @@
-// IDEA plugin
-resolvers += "sbt-idea-repo" at "http://mpeltonen.github.com/maven/"
-
-addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
-
-//addSbtPlugin("no.arktekk.sbt" % "aether-deploy" % "0.9")
-
-resolvers += Resolver.url("sbt-plugin-releases", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases/"))(Resolver.ivyStylePatterns)
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
+addSbtPlugin("no.arktekk.sbt" % "aether-deploy-signed" % "0.26.0")
+addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.1.2")
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.13")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
