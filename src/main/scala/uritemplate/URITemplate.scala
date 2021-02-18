@@ -62,7 +62,7 @@ object Allow {
 }
 
 case class URITemplate(expansions: List[Expansion]){
-  def expand(variables:Map[String, Option[Variable]]) = expansions.map(_.expand(variables)).mkString  
+  def expand(variables:Map[String, Option[Variable]]) = expansions.map(_.expand(variables)).mkString
   def expand(variables:(String, Option[Variable])*):String = expand(Map(variables:_*))
 }
 
@@ -72,31 +72,31 @@ sealed trait Expansion {
 
 sealed trait Lit extends Expansion {
   def expand(variables: Map[String, Option[Variable]]) = expanded
-  def expanded:String 
+  def expanded:String
 }
 case class Encoded(expanded:String) extends Lit
 case class Unencoded(char:Char) extends Lit {
-  def expanded = "%" + char.intValue().toHexString.toUpperCase
+  def expanded = "%" + char.toInt.toHexString.toUpperCase
 }
 
 case class VarSpec(name: String, modifier: Option[Modifier])
 
 object Expression {
-  
+
   def expand(variables:Map[String, Option[Variable]], variableList:List[VarSpec], first:String, sep:String, named:Boolean, ifemp:String, allow:String => String) = {
     val expanded = variableList.flatMap{ case VarSpec(n, modifier) =>
-      
+
       def name(s:String) = if(named) n+"="+s else s
-      
-      variables.getOrElse(n, None).flatMap{          
+
+      variables.getOrElse(n, None).flatMap{
         case SequentialVar(Seq()) | AssociativeVar(Seq()) => None
 
         case SequentialVar(Seq("")) => Some(if(named)n+ifemp else ifemp)
 
         case SequentialVar(variable) => Some(modifier match {
-          case None => name(variable.map(allow).mkString(","))              
-          case Some(Prefix(length)) => name(variable.map(v => allow(v.take(length))).mkString(","))              
-          case Some(Explode) => variable.map(n => name(allow(n))).mkString(sep)            
+          case None => name(variable.map(allow).mkString(","))
+          case Some(Prefix(length)) => name(variable.map(v => allow(v.take(length))).mkString(","))
+          case Some(Explode) => variable.map(n => name(allow(n))).mkString(sep)
         })
 
         case AssociativeVar(variable) => Some(modifier match {
@@ -107,7 +107,7 @@ object Expression {
       }
     }
     if(expanded.isEmpty) "" else expanded.mkString(first, sep, "")
-  }  
+  }
 }
 
 sealed abstract class Expression(first:String, sep:String, named:Boolean, ifemp:String, allow:String => String) extends Expansion {
@@ -129,17 +129,17 @@ case object Explode extends Modifier
 
 object URITemplateParser {
   import util.parsing.combinator.RegexParsers
-  import util.parsing.input.{CharSequenceReader}  
-  
+  import util.parsing.input.CharSequenceReader
+
   def parse(s:String):Either[String, URITemplate] = {
     val syntax = new URITemplateParsers
     import syntax._
     phrase(template)(new CharSequenceReader(s)) match {
       case Success(result, _) => Right(result)
       case n                  => Left(n.toString)
-    } 
+    }
   }
-  
+
   def u(s:String):List[Lit] = {
     val syntax = new URITemplateParsers
     import syntax._
@@ -148,7 +148,7 @@ object URITemplateParser {
       case n                  => sys.error(n.toString)
     }
   }
-  
+
   def ur(s:String):List[Lit] = {
     val syntax = new URITemplateParsers
     import syntax._
@@ -157,73 +157,73 @@ object URITemplateParser {
       case n                  => sys.error(n.toString)
     }
   }
-  
+
   class URITemplateParsers extends RegexParsers {
 
     override def skipWhitespace = false
 
     lazy val template = (expression | literal).* ^^ { expansions => URITemplate(expansions) }
-    
-    lazy val `U+R` = (pctEncoded ^^ Encoded | reserved | unreserved) | anyChar ^^ Unencoded 
-    lazy val U     = unreserved | anyChar ^^ Unencoded    
-    
+
+    lazy val `U+R` = (pctEncoded ^^ Encoded | reserved | unreserved) | anyChar ^^ Unencoded
+    lazy val U     = unreserved | anyChar ^^ Unencoded
+
     lazy val literal:Parser[Lit] =
       ( pctEncoded ^^ Encoded
-      | reserved 
+      | reserved
       | unreserved
       | ucschar
-      | iprivate 
+      | iprivate
       | unencodedLit )
-    
+
     lazy val unencodedLit =
       ( %(0x21) | %(0x23, 0x24) | %(0x26) | %(0x28, 0x3B) | %(0x3D) | %(0x3F, 0x5B)
       | %(0x5D) | %(0x5F) | %(0x61, 0x7A) | %(0x7E)) ^^ Unencoded
-    
-    lazy val expression = "{" ~> operator.? ~ variableList <~ "}" ^^ { 
+
+    lazy val expression = "{" ~> operator.? ~ variableList <~ "}" ^^ {
       case Some(op) ~ vars => op(vars)
       case _        ~ vars => Simple(vars)
     }
-    
-    lazy val operator = 
-      ( "+" ^^^ Reserved 
-      | "#" ^^^ Fragment 
-      | "." ^^^ Label 
-      | "/" ^^^ PathSegment 
-      | ";" ^^^ PathParameter 
-      | "?" ^^^ Query 
-      | "&" ^^^ QueryContinuation 
+
+    lazy val operator =
+      ( "+" ^^^ Reserved
+      | "#" ^^^ Fragment
+      | "." ^^^ Label
+      | "/" ^^^ PathSegment
+      | ";" ^^^ PathParameter
+      | "?" ^^^ Query
+      | "&" ^^^ QueryContinuation
       | opReserve )
-    
+
     lazy val opReserve = ("=" | "," | "!" | "@" | "|") >> { c => failure(c + " is reserved") }
-    
+
     lazy val variableList = repsep(varspec, ",")
     lazy val varspec = varname ~ modifierLevel4.? ^^ { case name ~ mod => VarSpec(name, mod) }
     lazy val varname = varchar ~ rep("." | varchar) ^^ { case head ~ tail => head + tail.mkString }
     lazy val varchar = ALPHA | DIGIT | "_" | pctEncoded
-    
+
     lazy val modifierLevel4 = prefix | explode
     lazy val prefix = ":" ~> "[1-9]".r ~ "\\d{0,3}".r ^^ { case a ~ b => Prefix((a + b).toInt) }
     lazy val explode = "*" ^^^ Explode
-    
+
     lazy val ALPHA = "[A-Za-z]".r
     lazy val DIGIT = "[0-9]".r
     lazy val HEXDIG = "[0-9A-Fa-f]".r
-    
+
     lazy val pctEncoded = "%" ~ HEXDIG ~ HEXDIG ^^ { case pct ~ h1 ~ h2 => pct + h1 + h2 }
     lazy val unreserved = (ALPHA | DIGIT | "-" | "." | "_" | "~") ^^ Encoded
     lazy val reserved = (genDelims | subDelims) ^^ Encoded
     lazy val genDelims = ":" | "/" | "?" | "#" | "[" | "]" | "@"
     lazy val subDelims = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "="
-    
-    lazy val ucschar = 
+
+    lazy val ucschar =
       ( %(0xA0,0xD7FF)      | %(0xF900,0xFDCF)   | %(0xFDF0,0xFFEF)
       | %(0x10000, 0x1FFFD) | %(0x20000,0x2FFFD) | %(0x30000,0x3FFFD)
       | %(0x40000, 0x4FFFD) | %(0x50000,0x5FFFD) | %(0x60000,0x6FFFD)
       | %(0x70000, 0x7FFFD) | %(0x80000,0x8FFFD) | %(0x90000,0x9FFFD)
       | %(0xA0000, 0xAFFFD) | %(0xB0000,0xBFFFD) | %(0xC0000,0xCFFFD)
       | %(0xD0000, 0xDFFFD) | %(0xE1000,0xEFFFD)) ^^ Unencoded
-    
-    lazy val iprivate = 
+
+    lazy val iprivate =
       ( %(0xE000,0xF8FF) | %(0xF0000,0xFFFFD) | %(0x100000,0x10FFFD) ) ^^ Unencoded
 
     lazy val anyChar = elem("anyChar", _ != 26.toChar)

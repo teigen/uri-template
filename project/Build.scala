@@ -6,13 +6,13 @@ object Build extends sbt.Build {
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "no.arktekk",
-    scalaVersion := "2.11.2",
-    crossScalaVersions := Seq("2.11.2","2.10.1"),
+    scalaVersion := "2.13.4",
+    crossScalaVersions := Seq("2.11.2","2.10.1", "2.12.13", "2.13.4"),
     publishTo <<= (version) apply {
       (v: String) => if (v.trim().endsWith("SNAPSHOT")) Some(Resolvers.sonatypeNexusSnapshots) else Some(Resolvers.sonatypeNexusStaging)
     },
     pomIncludeRepository := { x => false },
-    credentials += Credentials(Path.userHome / ".sbt" / "arktekk-credentials")      
+    credentials += Credentials(Path.userHome / ".sbt" / "arktekk-credentials")
   )
 
   lazy val root = Project(
@@ -20,9 +20,10 @@ object Build extends sbt.Build {
     base = file("."),
     settings = buildSettings ++ Seq(
       description := "URI Template",
-      name := "uri-template", 
+      name := "uri-template",
       libraryDependencies ++= Seq(
-        "org.scalatest" %% "scalatest" % "2.2.2" % "test"
+        "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
+        "org.scalatest" %% "scalatest" % "3.2.3" % "test"
       ),
       libraryDependencies <++= (scalaBinaryVersion) apply {(sv: String) =>
         if(sv == "2.11") Seq("org.scala-lang.modules" % "scala-parser-combinators_2.11" % "1.0.2") else Nil
