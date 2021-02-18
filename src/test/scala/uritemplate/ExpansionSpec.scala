@@ -12,7 +12,7 @@ trait ExpansionSpec extends AnyPropSpec {
 
   def renderVariables = {
     val keyLength = variables.keySet.map(_.length()).max
-    val strings = variables.map { case (key, value) =>
+    val strings   = variables.map { case (key, value) =>
       val padded: String = key + " " * (keyLength - key.length())
       padded + " := " + value
     }
