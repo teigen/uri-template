@@ -3,7 +3,6 @@ package uritemplate
 object Syntax extends Syntax
 
 trait Syntax {
-  import scala.language.implicitConversions
   implicit def varString(s: String) = Var(s)
 }
 
@@ -139,8 +138,8 @@ case class Prefix(maxLength: Int) extends Modifier
 case object Explode               extends Modifier
 
 object URITemplateParser {
-  import util.parsing.combinator.RegexParsers
-  import util.parsing.input.CharSequenceReader
+  import scala.util.parsing.combinator.RegexParsers
+  import scala.util.parsing.input.CharSequenceReader
 
   def parse(s: String): Either[String, URITemplate] = {
     val syntax = new URITemplateParsers
