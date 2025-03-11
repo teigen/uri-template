@@ -3,7 +3,7 @@ package uritemplate
 object Syntax extends Syntax
 
 trait Syntax {
-  implicit def varString(s: String) = Var(s)
+  implicit def varString(s: String): Var = Var(s)
 }
 
 case class Var(s: String) {
@@ -19,30 +19,30 @@ trait CanBeVar[-V] {
 }
 
 trait CanBeVars extends LowerPriorityCanBeVars {
-  implicit val stringCanBe = new CanBeVar[String] {
+  implicit val stringCanBe: CanBeVar[String] = new CanBeVar[String] {
     def canBe(v: String) = Option(v).map(vv => SequentialVar(Seq(vv)))
   }
 
-  implicit val tuple2CanBe = new CanBeVar[(String, String)] {
+  implicit val tuple2CanBe: CanBeVar[(String, String)] = new CanBeVar[(String, String)] {
     def canBe(v: (String, String)) = Option(v).map(vv => AssociativeVar(Seq(vv)))
   }
 
-  implicit val seqStringCanBe = new CanBeVar[Seq[String]] {
-    def canBe(v: Seq[String]) = Option(v).map(SequentialVar)
+  implicit val seqStringCanBe: CanBeVar[Seq[String]] = new CanBeVar[Seq[String]] {
+    def canBe(v: Seq[String]) = Option(v).map(SequentialVar.apply)
   }
 
-  implicit def optionCanBe[C: CanBeVar] = new CanBeVar[Option[C]] {
+  implicit def optionCanBe[C: CanBeVar]: CanBeVar[Option[C]] = new CanBeVar[Option[C]] {
     def canBe(v: Option[C]) = v.flatMap(CanBeVar[C].canBe)
   }
 
-  implicit val optionNothingCanBe = new CanBeVar[Option[Nothing]] {
+  implicit val optionNothingCanBe: CanBeVar[Option[Nothing]] = new CanBeVar[Option[Nothing]] {
     def canBe(v: Option[Nothing]) = v
   }
 }
 
 trait LowerPriorityCanBeVars {
-  implicit val seqTupleCanBe = new CanBeVar[Seq[(String, String)]] {
-    def canBe(v: Seq[(String, String)]) = Option(v).map(AssociativeVar)
+  implicit val seqTupleCanBe: CanBeVar[Seq[(String, String)]] = new CanBeVar[Seq[(String, String)]] {
+    def canBe(v: Seq[(String, String)]) = Option(v).map(AssociativeVar.apply)
   }
 }
 
@@ -51,18 +51,18 @@ case class SequentialVar(variable: Seq[String])            extends Variable
 case class AssociativeVar(variable: Seq[(String, String)]) extends Variable
 
 object URITemplate {
-  def apply(s: String): URITemplate = parse(s).fold(sys.error, identity)
-  def parse(s: String)              = URITemplateParser.parse(s)
+  def apply(s: String): URITemplate                 = parse(s).fold(sys.error, identity)
+  def parse(s: String): Either[String, URITemplate] = URITemplateParser.parse(s)
 }
 
 object Allow {
-  def U(s: String): String = URITemplateParser.u(s).map(_.expanded).mkString
-  def UR(s: String)        = URITemplateParser.ur(s).map(_.expanded).mkString
+  def U(s: String): String  = URITemplateParser.u(s).map(_.expanded).mkString
+  def UR(s: String): String = URITemplateParser.ur(s).map(_.expanded).mkString
 }
 
 case class URITemplate(expansions: List[Expansion]) {
-  def expand(variables: Map[String, Option[Variable]])       = expansions.map(_.expand(variables)).mkString
-  def expand(variables: (String, Option[Variable])*): String = expand(Map(variables: _*))
+  def expand(variables: Map[String, Option[Variable]]): String = expansions.map(_.expand(variables)).mkString
+  def expand(variables: (String, Option[Variable])*): String   = expand(Map(variables: _*))
 }
 
 sealed trait Expansion {
@@ -70,7 +70,7 @@ sealed trait Expansion {
 }
 
 sealed trait Lit                     extends Expansion {
-  def expand(variables: Map[String, Option[Variable]]) = expanded
+  def expand(variables: Map[String, Option[Variable]]): String = expanded
   def expanded: String
 }
 case class Encoded(expanded: String) extends Lit
@@ -121,7 +121,7 @@ object Expression {
 sealed abstract class Expression(first: String, sep: String, named: Boolean, ifemp: String, allow: String => String)
     extends Expansion {
   def variableList: List[VarSpec]
-  def expand(variables: Map[String, Option[Variable]]) =
+  def expand(variables: Map[String, Option[Variable]]): String =
     Expression.expand(variables, variableList, first, sep, named, ifemp, allow)
 }
 case class Simple(variableList: List[VarSpec]) extends Expression("", ",", false, "", Allow.U)
@@ -174,37 +174,45 @@ object URITemplateParser {
 
     lazy val template = (expression | literal).* ^^ { expansions => URITemplate(expansions) }
 
-    lazy val `U+R` = (pctEncoded ^^ Encoded | reserved | unreserved) | anyChar ^^ Unencoded
-    lazy val U     = unreserved | anyChar ^^ Unencoded
+    lazy val `U+R` = (pctEncoded ^^ (Encoded.apply) | reserved | unreserved) | anyChar ^^ (Unencoded.apply)
+    lazy val U     = unreserved | anyChar ^^ (Unencoded.apply)
 
     lazy val literal: Parser[Lit] =
-      (pctEncoded ^^ Encoded
-        | reserved
-        | unreserved
-        | ucschar
-        | iprivate
-        | unencodedLit)
+      pctEncoded ^^ Encoded.apply | reserved | unreserved | ucschar | iprivate | unencodedLit
+    lazy val unencodedLit: Parser[Unencoded] = {
+      List(
+        %(0x21),
+        %(0x23, 0x24),
+        %(0x26),
+        %(0x28, 0x3b),
+        %(0x3d),
+        %(0x3f, 0x5b),
+        %(0x5d),
+        %(0x5f),
+        %(0x61, 0x7a),
+        %(0x7e)
+      ).reduce(_ | _) ^^ (Unencoded.apply)
+    }
 
-    lazy val unencodedLit =
-      (%(0x21) | %(0x23, 0x24) | %(0x26) | %(0x28, 0x3b) | %(0x3d) | %(0x3f, 0x5b)
-        | %(0x5d) | %(0x5f) | %(0x61, 0x7a) | %(0x7e)) ^^ Unencoded
-
-    lazy val expression = "{" ~> operator.? ~ variableList <~ "}" ^^ {
-      case Some(op) ~ vars => op(vars)
+    lazy val expression: Parser[Expression] = "{" ~> operator.? ~ variableList <~ "}" ^^ {
+      case Some(op) ~ vars => op.apply(vars)
       case _ ~ vars        => Simple(vars)
     }
 
-    lazy val operator =
-      ("+" ^^^ Reserved
-        | "#" ^^^ Fragment
-        | "." ^^^ Label
-        | "/" ^^^ PathSegment
-        | ";" ^^^ PathParameter
-        | "?" ^^^ Query
-        | "&" ^^^ QueryContinuation
-        | opReserve)
+    lazy val operator: Parser[List[VarSpec] => Expression] = {
+      List(
+        "+" ^^^ (Reserved.apply(_)),
+        "#" ^^^ (Fragment.apply(_)),
+        "." ^^^ (Label.apply(_)),
+        "/" ^^^ (PathSegment.apply(_)),
+        ";" ^^^ (PathParameter.apply(_)),
+        "?" ^^^ (Query.apply(_)),
+        "&" ^^^ (QueryContinuation.apply(_)),
+        opReserve
+      ).reduce(_ | _)
+    }
 
-    lazy val opReserve = ("=" | "," | "!" | "@" | "|") >> { c => failure(c + " is reserved") }
+    lazy val opReserve: Parser[Nothing] = ("=" | "," | "!" | "@" | "|") >> { c => failure(c + " is reserved") }
 
     lazy val variableList = repsep(varspec, ",")
     lazy val varspec      = varname ~ modifierLevel4.? ^^ { case name ~ mod => VarSpec(name, mod) }
@@ -220,21 +228,42 @@ object URITemplateParser {
     lazy val HEXDIG = "[0-9A-Fa-f]".r
 
     lazy val pctEncoded = "%" ~ HEXDIG ~ HEXDIG ^^ { case pct ~ h1 ~ h2 => pct + h1 + h2 }
-    lazy val unreserved = (ALPHA | DIGIT | "-" | "." | "_" | "~") ^^ Encoded
-    lazy val reserved   = (genDelims | subDelims) ^^ Encoded
+    lazy val unreserved = (ALPHA | DIGIT | "-" | "." | "_" | "~") ^^ Encoded.apply
+    lazy val reserved   = (genDelims | subDelims) ^^ Encoded.apply
     lazy val genDelims  = ":" | "/" | "?" | "#" | "[" | "]" | "@"
     lazy val subDelims  = "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "="
 
-    lazy val ucschar =
-      (%(0xa0, 0xd7ff) | %(0xf900, 0xfdcf) | %(0xfdf0, 0xffef)
-        | %(0x10000, 0x1fffd) | %(0x20000, 0x2fffd) | %(0x30000, 0x3fffd)
-        | %(0x40000, 0x4fffd) | %(0x50000, 0x5fffd) | %(0x60000, 0x6fffd)
-        | %(0x70000, 0x7fffd) | %(0x80000, 0x8fffd) | %(0x90000, 0x9fffd)
-        | %(0xa0000, 0xafffd) | %(0xb0000, 0xbfffd) | %(0xc0000, 0xcfffd)
-        | %(0xd0000, 0xdfffd) | %(0xe1000, 0xefffd)) ^^ Unencoded
-
+    lazy val ucschar  =
+      List(
+        %(0xa0, 0xd7ff),
+        %(0xf900, 0xfdcf),
+        %(0xfdf0, 0xffef),
+        %(0x10000, 0x1fffd),
+        %(0x20000, 0x2fffd),
+        %(
+          0x30000,
+          0x3fffd
+        ),
+        %(0x40000, 0x4fffd),
+        %(0x50000, 0x5fffd),
+        %(0x60000, 0x6fffd),
+        %(0x70000, 0x7fffd),
+        %(0x80000, 0x8fffd),
+        %(
+          0x90000,
+          0x9fffd
+        ),
+        %(0xa0000, 0xafffd),
+        %(0xb0000, 0xbfffd),
+        %(0xc0000, 0xcfffd),
+        %(0xd0000, 0xdfffd),
+        %(
+          0xe1000,
+          0xefffd
+        )
+      ).reduce(_ | _) ^^ (Unencoded.apply)
     lazy val iprivate =
-      (%(0xe000, 0xf8ff) | %(0xf0000, 0xffffd) | %(0x100000, 0x10fffd)) ^^ Unencoded
+      (%(0xe000, 0xf8ff) | %(0xf0000, 0xffffd) | %(0x100000, 0x10fffd)) ^^ (Unencoded.apply)
 
     lazy val anyChar          = elem("anyChar", _ != 26.toChar)
     def %(v: Int)             = elem(v.toHexString.toUpperCase, _.toInt == v)

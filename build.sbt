@@ -13,10 +13,10 @@ ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy
 
 val Scala212 = "2.12.20"
 val Scala213 = "2.13.16"
-//val Scala3   = "3.3.4"
+val Scala3   = "3.3.4"
 
-ThisBuild / crossScalaVersions := Seq(Scala212, Scala213)
-ThisBuild / scalaVersion := Scala213 // the default Scala
+ThisBuild / crossScalaVersions := Seq(Scala212, Scala213, Scala3)
+ThisBuild / scalaVersion := Scala3 // the default Scala
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
