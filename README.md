@@ -1,4 +1,4 @@
-[Mained fork at Arktekk](https://github.com/arktekk/uri-template)
+[Maintained fork at Arktekk](https://github.com/arktekk/uri-template)
 ===
 
 URI Template
