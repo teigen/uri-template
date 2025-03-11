@@ -1,3 +1,6 @@
+[Mained fork at Arktekk](https://github.com/arktekk/uri-template)
+===
+
 URI Template
 =============
 Complete implementation of [RFC-6570 (uri-templates)](http://tools.ietf.org/html/rfc6570) in Scala
